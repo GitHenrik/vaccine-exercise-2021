@@ -1,18 +1,18 @@
 import axios from 'axios'
 import { useState, useEffect } from 'react'
-import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import './css/base.css'
 import React from 'react'
 import Loader from './components/Loader'
-import { MainWrapper, Divider, ContentWrapper, InfoWrapper, BackgroundWrapper, ChartWrapper, Header, SubHeader } from './utils/wrappers'
-import InjectionGraph from './graphs/InjectionGraph'
-import UnusedVaccineGraph from './graphs/UnusedVaccineGraph'
-import OrderGraph from './graphs/OrderGraph'
-import SpecificDateGraph from './graphs/SpecificDateGraph'
-import AggregatedDataGraph from './graphs/AggregatedDataGraph'
+import { MainWrapper, Divider, Banner, ContentWrapper, BackgroundWrapper, Header, SubHeader } from './utils/wrappers'
+import Charts from './components/Charts'
+import GeneralInfo from './components/GeneralInfo'
+import DateSelector from './components/DateSelector'
 
-const baseUrl = 'http://localhost:3001'
+// const devUrl = 'http://localhost:3001'
+// const productionUrl = 'https://vast-harbor-53912.herokuapp.com/'
+
+const baseUrl = 'https://vast-harbor-53912.herokuapp.com' 
 
 const App = () => {
 
@@ -40,12 +40,7 @@ const App = () => {
   const [expiredUpToDate, setExpiredUpToDate] = useState(0)
   const [injectedUpToDate, setInjectedUpToDate] = useState(0)
   const [usableOnDate, setUsableOnDate] = useState(0)
-
-  // states for aggregated data
-  const [expiredOrdersUpToDateArray, setExpiredOrdersUpToDateArray] = useState([])
-  const [notExpiredOrdersUpToDateArray, setNotExpiredOrdersUpToDateArray] = useState([])
-  const [injectedUpToDateArray, setInjectedUpToDateArray] = useState([])
-  const [notInjectedUpToDateArray, setNotInjectedUpToDateArray] = useState([])
+  const [tenDayExpirations, setTenDayExpirations] = useState(0)
 
   // states for general data
   const [totalVaccineCount, setTotalVaccineCount] = useState(0)
@@ -55,7 +50,7 @@ const App = () => {
 
   useEffect(() => {
     getBaseData()
-    // display a nice-looking loader to users during loading
+    // display a nice-looking loader to users for a short while
     setTimeout(() => setLoading(false), 2000)
     return () => {
       // cleanup function
@@ -63,8 +58,8 @@ const App = () => {
   }, [])
 
   const getBaseData = async () => {
-    const antiquaResult = await axios.get(`${baseUrl}/antiqua`)
-    const antiquaVaccines = getUsedVaccinesPerProducer(antiquaResult.data)
+    const antiquaResult = await axios.get(`${baseUrl}/Antiqua`)
+    const antiquaVaccines = getVaccinesPerProducer(antiquaResult.data)
     setAntiqua({
       data: antiquaResult.data,
       orderCount: antiquaResult.data.length,
@@ -73,8 +68,8 @@ const App = () => {
     setTotalVaccineCount(count => count + antiquaVaccines)
     setTotalOrderCount(count => count + antiquaResult.data.length)
     
-    const solarBuddhicaResult = await axios.get(`${baseUrl}/solarBuddhica`)
-    const solarBuddhicaVaccines = getUsedVaccinesPerProducer(solarBuddhicaResult.data)
+    const solarBuddhicaResult = await axios.get(`${baseUrl}/SolarBuddhica`)
+    const solarBuddhicaVaccines = getVaccinesPerProducer(solarBuddhicaResult.data)
     setSolarBuddhica({
       data: solarBuddhicaResult.data,
       orderCount: solarBuddhicaResult.data.length,
@@ -83,8 +78,8 @@ const App = () => {
     setTotalVaccineCount(count => count + solarBuddhicaVaccines)
     setTotalOrderCount(count => count + solarBuddhicaResult.data.length)
 
-    const zerpfyResult = await axios.get(`${baseUrl}/zerpfy`)
-    const zerpfyVaccines = getUsedVaccinesPerProducer(zerpfyResult.data)
+    const zerpfyResult = await axios.get(`${baseUrl}/Zerpfy`)
+    const zerpfyVaccines = getVaccinesPerProducer(zerpfyResult.data)
     setZerpfy({
       data: zerpfyResult.data,
       orderCount: zerpfyResult.data.length,
@@ -99,22 +94,28 @@ const App = () => {
     setUnusedVaccineCount(antiquaVaccines + solarBuddhicaVaccines + zerpfyVaccines - vaccinationResult.data.length)
   }
 
-  // How many vaccines per producer?
-  const getUsedVaccinesPerProducer = data => {
-    if (!data) return 0
-    let orderCount = 0
-    for (let i = 0; i < data.length; i++) {
-      orderCount += data[i].injections
-    }
-    return orderCount
+  /**
+   * 
+   * @param {Array} producerData Array of vaccination orders from a single producer
+   * @returns {Number} total amount of vaccines included in the order array
+   */
+  const getVaccinesPerProducer = producerData => {
+    if (!producerData || producerData.length === 0) return 0
+    let injectionCount = producerData.reduce((injected, next) => {
+      return {injections: injected.injections + next.injections}
+    })
+    return injectionCount.injections
   }
 
-  // given vaccines exactly on the selected date
-  // check that year, month, and day match.
+  /**
+   * 
+   * @param {Date} date selected date for calculations
+   * @returns {Number} amount of injections given on the exact date
+   */
   const getVaccinesOnDate = date => {
     let vaccineCount = 0
     let nextDate = new Date()
-    // loop through all given injections and check the date
+    // loop through all given injections and check that the date matches
     for (let i = 0; i < vaccinationData.length; i++) {
       nextDate = new Date(vaccinationData[i].vaccinationDate)
       if (nextDate.getFullYear() === date.getFullYear() && 
@@ -126,8 +127,11 @@ const App = () => {
     return vaccineCount
   }
 
-  // arrived orders on a certain date
-  // check that year, month, and day match.
+  /**
+   * 
+   * @param {Date} date selected date for calculations
+   * @returns {Number} amount of orders made on the exact date
+   */
   const getOrdersOnDate = date => {
     let orderCount = 0
     let nextDate = new Date()
@@ -145,7 +149,11 @@ const App = () => {
     return orderCount
   }
 
-  //updates state with expired orders and not expired orders as complete datasets
+  /**
+   * 
+   * @param {Date} date selected date for calculations
+   * @returns {Array} two-dimensional array containing expired and not expired vaccines on selected date
+   */
   const calculateExpirationArrays = date => {
     const expiredOrders = []
     const notExpiredOrders = []
@@ -159,18 +167,21 @@ const App = () => {
         if (endTime - nextTime > thirtyDaysMilliseconds) {
           expiredOrders.push(allProducers[producer].data[i])
         }
-        if (endTime - nextTime < thirtyDaysMilliseconds
+        if (endTime - nextTime <= thirtyDaysMilliseconds
           && endTime - nextTime >= 0) {
           notExpiredOrders.push(allProducers[producer].data[i])
         }
         //else do nothing, the order would be in the future.
       }
     }
-    setExpiredOrdersUpToDateArray(expiredOrders)
-    setNotExpiredOrdersUpToDateArray(notExpiredOrders)
+    return [expiredOrders, notExpiredOrders]
   }
 
-  //updates state with given and not given injections as complete datasets
+  /**
+   * 
+   * @param {Date} date selected date for calculations
+   * @returns {Array} two-dimensional array containing given and not given vaccines on selected date
+   */
   const calculateInjectionArrays = date => {
     let nextTime = 0
     let endTime = date.getTime()
@@ -186,61 +197,89 @@ const App = () => {
         notGiven.push(vaccinationData[i])
       }
     }
-    setInjectedUpToDateArray(given)
-    setNotInjectedUpToDateArray(notGiven)
+    return [given, notGiven]
   }
 
+ 
   /**
-   * Counts how many injections arrived in the last 30 days and are not yet injected
+   * Counts how many injections arrived in the last 30 days and are not yet injected,
+   * and updates state accordingly.
+   * 
+   * @param {Date} date selected date for calculations
    */
-  const calculateUsableVaccines = () => {
+  const calculateUsableAndInjectedVaccines = date => {
+    let expirationArrays = calculateExpirationArrays(date)
+    let injectionArrays = calculateInjectionArrays(date)
     let notExpiredCount = 0
-    for (let i = 0; i < notExpiredOrdersUpToDateArray.length; i++) {
-      notExpiredCount += notExpiredOrdersUpToDateArray[i].injections
+    let usableCount = 0
+    for (let i = 0; i < expirationArrays[1].length; i++) {
+      notExpiredCount += expirationArrays[1][i].injections
     }
     let givenNotExpired = 0
-    for (let i = 0; i < injectedUpToDateArray.length; i++) {
-      for (let j = 0; j < notExpiredOrdersUpToDateArray.length; j++) {
-        if (injectedUpToDateArray[i].sourceBottle === notExpiredOrdersUpToDateArray[j].id) {
+    for (let i = 0; i < injectionArrays[0].length; i++) {
+      for (let j = 0; j < expirationArrays[1].length; j++) {
+        if (injectionArrays[0][i].sourceBottle === expirationArrays[1][j].id) {
           givenNotExpired++
           break
         }
       }
     }
-    let usableCount = notExpiredCount - givenNotExpired
+    usableCount = notExpiredCount - givenNotExpired
     setUsableOnDate(usableCount)
+    setInjectedUpToDate(injectionArrays[0].length)
   }
 
-  // updates state based on selected date, aggregating source data arrays into more specific ones
-  // FIXME: state updates too late, and changes are displayed only after the next state change.
+  /**
+   * updates state based on selected date, updating state with aggregated data
+   * @param {Date} date selected date for calculations
+   */
   const calculateAggregatedData = date => {
-    calculateExpirationArrays(date)
-    calculateInjectionArrays(date)
-    // calculateGivenNotExpiredInjections() 
-    calculateUsableVaccines()
-    calculateExpirationsUpToDate()
-    setInjectedUpToDate(injectedUpToDateArray.length)
+    calculateUsableAndInjectedVaccines(date)
+    setExpiredUpToDate(calculateExpirationsUpToDate(date))
+    setTenDayExpirations(calculateTenDayExpirations(date))
   }
 
-  // looks through given vaccinations, and checks how many of them were a part of expired orders.
-  const calculateExpirationsUpToDate = () => {
-    let potentialExpiredInjections = 0
+  /**
+   * 
+   * @param {Date} date selected date for calculations
+   * @returns {Number} total amount of expired vaccines up to the selected date
+   */
+  const calculateExpirationsUpToDate = date => {
+    let expirationArrays = calculateExpirationArrays(date)
+    let injectionArrays = calculateInjectionArrays(date)
+    let expiredInjections = 0
     // calculate total expirations as if none were given
-    for (let i = 0; i < expiredOrdersUpToDateArray.length; i++) {
-      potentialExpiredInjections += expiredOrdersUpToDateArray[i].injections
+    for (let i = 0; i < expirationArrays[0].length; i++) {
+      expiredInjections += expirationArrays[0][i].injections
     }
     // reduce the potential expirations with those that were actually given
-    for (let i = 0; i < injectedUpToDateArray.length; i++) {
-      for (let j = 0; j < expiredOrdersUpToDateArray.length; j++) {
-        if (injectedUpToDateArray[i].sourceBottle === expiredOrdersUpToDateArray[j].id) {
-          potentialExpiredInjections--
+    for (let i = 0; i < injectionArrays[0].length; i++) {
+      for (let j = 0; j < expirationArrays[0].length; j++) {
+        if (injectionArrays[0][i].sourceBottle === expirationArrays[0][j].id) {
+          expiredInjections--
           break
         }
       }
     }
-    setExpiredUpToDate(potentialExpiredInjections)
+    return expiredInjections
+  }
+  
+  /**
+   * Source for this code snippet, slightly modified:
+   * https://stackoverflow.com/a/19691491
+   * 
+   * @param {Date} date selected date for calculations
+   * @returns amount of vaccines expiring in 10 days following the selected date
+   */
+  const calculateTenDayExpirations = date => {
+    let currentExpirations = calculateExpirationsUpToDate(date)
+    let futureDate = new Date(date)
+    futureDate.setDate(futureDate.getDate() + 10)
+    let futureExpirations = calculateExpirationsUpToDate(futureDate)
+    return futureExpirations - currentExpirations
   }
 
+  // updates all date-related states upon selecting a new date
   const handleDateChange = date => {
     setSelectedDate(date)
     setOrdersOnDate(getOrdersOnDate(date))
@@ -251,94 +290,45 @@ const App = () => {
   if (loading) {
     return <Loader/>
   }
-  // TODO: split into smaller components.
+
   return (
-    <MainWrapper>
-      <Divider>
-        <ContentWrapper>
-          <Header>Vaccination infographic</Header>
-        </ContentWrapper>
-        <ContentWrapper>
-          <BackgroundWrapper>
-            <SubHeader>How many orders and vaccines have arrived total?</SubHeader>
-            <InfoWrapper>
-              <div>All in all, there are this many orders in total: {totalOrderCount}</div> 
-              <div>All in all, there are this many vaccines in total: {totalVaccineCount}</div> 
-            </InfoWrapper>
-          </BackgroundWrapper>
-        </ContentWrapper>
-        <ContentWrapper>
-          <BackgroundWrapper>
-            <SubHeader>How many of the vaccinations have been used?</SubHeader>
-            <InfoWrapper>
-              <div>This many vaccinations have been distributed: {vaccinationData.length}</div> 
-            </InfoWrapper>
-          </BackgroundWrapper>
-        </ContentWrapper>
-        <ContentWrapper>
-          <BackgroundWrapper>
-            <SubHeader>How many orders/vaccines per producer?</SubHeader>
-            <InfoWrapper>
-              <div>There are this many Antiqua-vaccination orders: {antiqua.orderCount}</div>
-              <div>Antiqua vaccine count: {antiqua.vaccineCount}</div>
-              <div>There are this many SolarBuddhica-vaccination orders: {solarBuddhica.orderCount}</div>
-              <div>SolarBuddhica vaccine count: {solarBuddhica.vaccineCount}</div>
-              <div>There are this many Zerpfy-vaccination orders: {zerpfy.orderCount}</div>
-              <div>Zerpfy vaccine count: {zerpfy.vaccineCount}</div>
-            </InfoWrapper>
-          </BackgroundWrapper>
-        </ContentWrapper>
-        <ContentWrapper>
-          <BackgroundWrapper>
-            <SubHeader>Select a date to inspect!</SubHeader>
-            <InfoWrapper>
-              <DatePicker selected={selectedDate} onChange={(date) => handleDateChange(date)} />
-              <div><i>Selected date: {selectedDate.toString()}</i></div>
-              <div>Things to display:</div>
-              <div>How many vaccines had expired on the date? (expired - given)</div>
-              <div>How many are still usable on the date?</div>
-              <div>How many expire in the next 10 days?</div>
-              <div>How many were injected up to the date?</div>
-            </InfoWrapper>
-          </BackgroundWrapper>
-        </ContentWrapper>
-        <ContentWrapper>
-          <BackgroundWrapper>
-            <SubHeader>Helpful buttons for development</SubHeader>
-            <button onClick={() => console.log(antiqua.data)}>Click for producer data logging!</button><br/>
-            <button onClick={() => console.log(vaccinationData)}>Click for vaccination data logging!</button><br/>
-          </BackgroundWrapper>
-        </ContentWrapper>
-      </Divider>
-      <Divider>
-        <ContentWrapper>
-          <Header>Cool charts</Header>
-          <BackgroundWrapper>
-            <SubHeader>Date-specific information</SubHeader>
-          </BackgroundWrapper>
-          <ChartWrapper>
-            <SpecificDateGraph injectionsOnDate={injectionsOnDate} ordersOnDate={ordersOnDate}/>
-          </ChartWrapper>
-          <ChartWrapper>
-            <AggregatedDataGraph injectedUpToDate={injectedUpToDate} expiredUpToDate={expiredUpToDate} usableOnDate={usableOnDate}/>
-          </ChartWrapper>
-          <BackgroundWrapper>
-            <SubHeader>General information</SubHeader>
-          </BackgroundWrapper>
-          <ChartWrapper>
-            <InjectionGraph antiqua={antiqua} solarBuddhica={solarBuddhica} zerpfy={zerpfy}/>
-          </ChartWrapper>
-          <ChartWrapper>
-            <OrderGraph antiqua={antiqua} solarBuddhica={solarBuddhica} zerpfy={zerpfy}/>
-          </ChartWrapper>
-          <ChartWrapper>
-            <UnusedVaccineGraph usedVaccineCount={usedVaccineCount} unusedVaccineCount={unusedVaccineCount}/>
-          </ChartWrapper>
-          
-        </ContentWrapper>
-        
-      </Divider>
-    </MainWrapper>
+    <>
+      <Banner>
+        <Header>Vaccination infographic</Header>
+      </Banner>
+      <MainWrapper>
+        <Divider>
+          <GeneralInfo antiqua={antiqua} 
+            solarBuddhica={solarBuddhica} 
+            zerpfy={zerpfy} 
+            totalOrderCount={totalOrderCount} 
+            totalVaccineCount={totalVaccineCount} 
+            injections={vaccinationData.length}/>
+          <DateSelector selectedDate={selectedDate} handleDateChange={handleDateChange}/>
+          <ContentWrapper>
+            <BackgroundWrapper>
+              <SubHeader>Helpful buttons for development</SubHeader>
+              <button onClick={() => console.log(antiqua.data)}>Click for producer data logging!</button><br/>
+              <button onClick={() => console.log(vaccinationData)}>Click for vaccination data logging!</button><br/>
+            </BackgroundWrapper>
+          </ContentWrapper>
+        </Divider>
+        <Divider>
+          <Charts 
+            injectionsOnDate={injectionsOnDate} 
+            ordersOnDate={ordersOnDate}
+            injectedUpToDate={injectedUpToDate}
+            expiredUpToDate={expiredUpToDate} 
+            usableOnDate={usableOnDate}
+            tenDayExpirations={tenDayExpirations}
+            antiqua={antiqua}
+            solarBuddhica={solarBuddhica}
+            zerpfy={zerpfy}
+            usedVaccineCount={usedVaccineCount} 
+            unusedVaccineCount={unusedVaccineCount}/>         
+        </Divider>
+      </MainWrapper>
+    </>
   )
 }
 

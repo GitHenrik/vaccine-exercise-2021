@@ -13,6 +13,15 @@ display: flex;
 flex-direction: row;
 `
 
+export const Banner = styled.div`
+margin: 0;
+border: 0;
+min-width: 768px;
+background: linear-gradient(#c4c488, #F3F2C9);
+display: flex;
+justify-content: center;
+`
+
 export const Divider = styled.div`
 display: flex;
 padding-left: 1rem;

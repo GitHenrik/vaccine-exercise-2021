@@ -1,5 +1,5 @@
 import React from 'react'
-import { ContentWrapper, BackgroundWrapper, ChartWrapper, Header, SubHeader } from '../utils/wrappers'
+import { ContentWrapper, BackgroundWrapper, ChartWrapper, SubHeader } from '../utils/wrappers'
 import InjectionGraph from '../graphs/InjectionGraph'
 import UnusedVaccineGraph from '../graphs/UnusedVaccineGraph'
 import OrderGraph from '../graphs/OrderGraph'
@@ -9,37 +9,42 @@ import PropTypes from 'prop-types'
 
 const Charts = props => {
   return (
-    <ContentWrapper>
-      <Header>Cool charts</Header>
-      <BackgroundWrapper>
-        <SubHeader>Date-specific charts</SubHeader>
-      </BackgroundWrapper>
-      <ChartWrapper>
-        <SpecificDateGraph injectionsOnDate={props.injectionsOnDate} ordersOnDate={props.ordersOnDate}/>
-      </ChartWrapper>
-      <ChartWrapper>
-        <AggregatedDataGraph injectedUpToDate={props.injectedUpToDate} expiredUpToDate={props.expiredUpToDate} usableOnDate={props.usableOnDate}/>
-      </ChartWrapper>
-      <BackgroundWrapper>
-        <SubHeader>Aggregated charts</SubHeader>
-      </BackgroundWrapper>
-      <ChartWrapper>
-        Injections expiring in the next 10 days: {props.tenDayExpirations}
-      </ChartWrapper>
-      <ChartWrapper>
-        <InjectionGraph antiqua={props.antiqua} solarBuddhica={props.solarBuddhica} zerpfy={props.zerpfy}/>
-      </ChartWrapper>
-      <ChartWrapper>
-        <OrderGraph antiqua={props.antiqua} solarBuddhica={props.solarBuddhica} zerpfy={props.zerpfy}/>
-      </ChartWrapper>
-      <ChartWrapper>
-        <UnusedVaccineGraph usedVaccineCount={props.usedVaccineCount} unusedVaccineCount={props.unusedVaccineCount}/>
-      </ChartWrapper>
-    </ContentWrapper>
+    <>
+      {props.showDateCharts && <ContentWrapper>
+        <BackgroundWrapper>
+          <SubHeader>Date-specific charts</SubHeader>
+        </BackgroundWrapper>
+        <ChartWrapper>
+          Injections expiring in the next 10 days: <b>{props.tenDayExpirations}</b>
+        </ChartWrapper>
+        <ChartWrapper>
+          <SpecificDateGraph injectionsOnDate={props.injectionsOnDate} ordersOnDate={props.ordersOnDate}/>
+        </ChartWrapper>
+        <ChartWrapper>
+          <AggregatedDataGraph injectedUpToDate={props.injectedUpToDate} expiredUpToDate={props.expiredUpToDate} usableOnDate={props.usableOnDate}/>
+        </ChartWrapper>
+      </ContentWrapper>}
+      {props.showAggregatedCharts && <ContentWrapper>
+        <BackgroundWrapper>
+          <SubHeader>Aggregated charts</SubHeader>
+        </BackgroundWrapper>
+        <ChartWrapper>
+          <InjectionGraph antiqua={props.antiqua} solarBuddhica={props.solarBuddhica} zerpfy={props.zerpfy}/>
+        </ChartWrapper>
+        <ChartWrapper>
+          <OrderGraph antiqua={props.antiqua} solarBuddhica={props.solarBuddhica} zerpfy={props.zerpfy}/>
+        </ChartWrapper>
+        <ChartWrapper>
+          <UnusedVaccineGraph usedVaccineCount={props.usedVaccineCount} unusedVaccineCount={props.unusedVaccineCount}/>
+        </ChartWrapper>
+      </ContentWrapper>}
+    </>
   )
 }
 
 Charts.propTypes = {
+  showDateCharts: PropTypes.bool,
+  showAggregatedCharts: PropTypes.bool,
   injectionsOnDate: PropTypes.number,
   ordersOnDate: PropTypes.number,
   injectedUpToDate: PropTypes.number,

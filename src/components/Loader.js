@@ -1,10 +1,10 @@
 import React from 'react'
-import { MainWrapper, LoadingWrapper, Header } from '../utils/wrappers'
+import { MainContentWrapper, LoadingWrapper, Header } from '../utils/wrappers'
 import ContentLoader from 'react-content-loader'
 
 const Loader = () => {
   return (
-    <MainWrapper>
+    <MainContentWrapper>
       <LoadingWrapper>
         <Header>Loading...</Header>
         <ContentLoader 
@@ -15,7 +15,7 @@ const Loader = () => {
           foregroundColor="#ecebeb"
         ></ContentLoader>
       </LoadingWrapper>
-    </MainWrapper>
+    </MainContentWrapper>
   )
 }
 

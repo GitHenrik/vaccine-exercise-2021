@@ -4,10 +4,12 @@ import 'react-datepicker/dist/react-datepicker.css'
 import './css/base.css'
 import React from 'react'
 import Loader from './components/Loader'
-import { MainWrapper, Divider, Banner, ContentWrapper, BackgroundWrapper, Header, SubHeader } from './utils/wrappers'
+import { SubHeader, DisplayWrapper, SidebarWrapper, MainContentWrapper } from './utils/wrappers'
 import Charts from './components/Charts'
 import GeneralInfo from './components/GeneralInfo'
 import DateSelector from './components/DateSelector'
+import Footer from './components/Footer'
+import Banner from './components/Banner'
 
 // const devUrl = 'http://localhost:3001'
 // const productionUrl = 'https://vast-harbor-53912.herokuapp.com/'
@@ -33,6 +35,11 @@ const App = () => {
   const allProducers = [antiqua, solarBuddhica, zerpfy]
 
   const [selectedDate, setSelectedDate] = useState(new Date('2021-04-12T11:10:06.473587Z'))
+
+  // states to toggle display from the UI
+  const [showGeneralInfo, setShowGeneralInfo] = useState(true)
+  const [showDateCharts, setShowDateCharts] = useState(false)
+  const [showAggregatedCharts, setShowAggregatedCharts] = useState(false)
 
   // states for date-specific data display
   const [ordersOnDate, setOrdersOnDate] = useState(0)
@@ -285,36 +292,43 @@ const App = () => {
     setOrdersOnDate(getOrdersOnDate(date))
     setInjectionsOnDate(getVaccinesOnDate(date))
     calculateAggregatedData(date)
+    // displays charts about the date
+    setShowGeneralInfo(false)
+    setShowDateCharts(true)
   }
   
   if (loading) {
-    return <Loader/>
+    return (
+      <>
+        <Banner/>
+        <Loader/>
+        <Footer/>
+      </>
+    )
   }
 
+  // TODO: make view stretch to 100% height
   return (
     <>
-      <Banner>
-        <Header>Vaccination infographic</Header>
-      </Banner>
-      <MainWrapper>
-        <Divider>
-          <GeneralInfo antiqua={antiqua} 
+      <Banner/>
+      <MainContentWrapper>
+        <SidebarWrapper>
+          <DateSelector selectedDate={selectedDate} handleDateChange={handleDateChange}/>
+          <button onClick={() => setShowGeneralInfo(!showGeneralInfo)}>{showGeneralInfo ? 'Hide ' : 'Show '}general data</button>
+          <button onClick={() => setShowDateCharts(!showDateCharts)}>{showDateCharts ? 'Hide ' : 'Display '}date-specific charts</button>
+          <button onClick={() => setShowAggregatedCharts(!showAggregatedCharts)}>{showAggregatedCharts ? 'Hide ' : 'Display '}aggregated charts</button>
+        </SidebarWrapper>
+        <DisplayWrapper>
+          {!showGeneralInfo && !showAggregatedCharts && !showDateCharts && <SubHeader>Select something to display from the side bar!</SubHeader>}
+          {showGeneralInfo && <GeneralInfo antiqua={antiqua} 
             solarBuddhica={solarBuddhica} 
             zerpfy={zerpfy} 
             totalOrderCount={totalOrderCount} 
             totalVaccineCount={totalVaccineCount} 
-            injections={vaccinationData.length}/>
-          <DateSelector selectedDate={selectedDate} handleDateChange={handleDateChange}/>
-          <ContentWrapper>
-            <BackgroundWrapper>
-              <SubHeader>Helpful buttons for development</SubHeader>
-              <button onClick={() => console.log(antiqua.data)}>Click for producer data logging!</button><br/>
-              <button onClick={() => console.log(vaccinationData)}>Click for vaccination data logging!</button><br/>
-            </BackgroundWrapper>
-          </ContentWrapper>
-        </Divider>
-        <Divider>
+            injections={vaccinationData.length}/>}
           <Charts 
+            showAggregatedCharts={showAggregatedCharts}
+            showDateCharts={showDateCharts}
             injectionsOnDate={injectionsOnDate} 
             ordersOnDate={ordersOnDate}
             injectedUpToDate={injectedUpToDate}
@@ -325,11 +339,15 @@ const App = () => {
             solarBuddhica={solarBuddhica}
             zerpfy={zerpfy}
             usedVaccineCount={usedVaccineCount} 
-            unusedVaccineCount={unusedVaccineCount}/>         
-        </Divider>
-      </MainWrapper>
+            unusedVaccineCount={unusedVaccineCount}/>      
+        </DisplayWrapper>
+      </MainContentWrapper>
+      <Footer/>
     </>
+
   )
 }
+
+
 
 export default App

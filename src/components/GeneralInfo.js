@@ -9,7 +9,7 @@ const GeneralInfo = ({ antiqua, solarBuddhica, zerpfy, totalOrderCount, totalVac
     </ContentWrapper>
     <ContentWrapper>
       <BackgroundWrapper>
-        <SubHeader>How many orders and vaccines have arrived total?</SubHeader>
+        <SubHeader>How many orders and vaccines have arrived in total?</SubHeader>
         <InfoWrapper>
           <div>All in all, there are this many orders in total: {totalOrderCount}</div> 
           <div>All in all, there are this many vaccines in total: {totalVaccineCount}</div> 

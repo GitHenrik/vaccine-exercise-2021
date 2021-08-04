@@ -10,11 +10,18 @@ import GeneralInfo from './components/GeneralInfo'
 import DateSelector from './components/DateSelector'
 import Footer from './components/Footer'
 import Banner from './components/Banner'
+import { getVaccinesPerProducer, 
+  getVaccinesOnDate,  
+  getOrdersOnDate, 
+  calculateAggregatedData } from './helpers/calculations'
+
+// TODO: update jsdocs
 
 // const devUrl = 'http://localhost:3001'
 // const productionUrl = 'https://vast-harbor-53912.herokuapp.com/'
 
-const baseUrl = 'https://vast-harbor-53912.herokuapp.com' 
+// TODO: create a build, save url to env variable
+const baseUrl = 'http://localhost:3001' 
 
 const App = () => {
 
@@ -31,8 +38,6 @@ const App = () => {
   const [antiqua, setAntiqua] = useState(placeholder)
   const [solarBuddhica, setSolarBuddhica] = useState(placeholder)
   const [zerpfy, setZerpfy] = useState(placeholder)
-
-  const allProducers = [antiqua, solarBuddhica, zerpfy]
 
   const [selectedDate, setSelectedDate] = useState(new Date('2021-04-12T11:10:06.473587Z'))
 
@@ -101,197 +106,23 @@ const App = () => {
     setUnusedVaccineCount(antiquaVaccines + solarBuddhicaVaccines + zerpfyVaccines - vaccinationResult.data.length)
   }
 
-  /**
-   * 
-   * @param {Array} producerData Array of vaccination orders from a single producer
-   * @returns {Number} total amount of vaccines included in the order array
-   */
-  const getVaccinesPerProducer = producerData => {
-    if (!producerData || producerData.length === 0) return 0
-    let injectionCount = producerData.reduce((injected, next) => {
-      return {injections: injected.injections + next.injections}
-    })
-    return injectionCount.injections
-  }
 
   /**
-   * 
-   * @param {Date} date selected date for calculations
-   * @returns {Number} amount of injections given on the exact date
-   */
-  const getVaccinesOnDate = date => {
-    let vaccineCount = 0
-    let nextDate = new Date()
-    // loop through all given injections and check that the date matches
-    for (let i = 0; i < vaccinationData.length; i++) {
-      nextDate = new Date(vaccinationData[i].vaccinationDate)
-      if (nextDate.getFullYear() === date.getFullYear() && 
-          nextDate.getMonth() === date.getMonth() && 
-          nextDate.getDate() === date.getDate()) {
-        vaccineCount++
-      } 
-    }
-    return vaccineCount
-  }
-
-  /**
-   * 
-   * @param {Date} date selected date for calculations
-   * @returns {Number} amount of orders made on the exact date
-   */
-  const getOrdersOnDate = date => {
-    let orderCount = 0
-    let nextDate = new Date()
-    // loop through all data and check for a matching arrival date
-    for (let i = 0; i < allProducers.length; i++) {
-      for (let j = 0; j < allProducers[i].data.length; j++) {
-        nextDate = new Date(allProducers[i].data[j].arrived)
-        if (nextDate.getFullYear() === date.getFullYear() && 
-          nextDate.getMonth() === date.getMonth() && 
-          nextDate.getDate() === date.getDate()) {
-          orderCount++
-        }
-      }
-    }
-    return orderCount
-  }
-
-  /**
-   * 
-   * @param {Date} date selected date for calculations
-   * @returns {Array} two-dimensional array containing expired and not expired vaccines on selected date
-   */
-  const calculateExpirationArrays = date => {
-    const expiredOrders = []
-    const notExpiredOrders = []
-    let nextTime = 0
-    const thirtyDaysMilliseconds = 30 * 24 * 60 * 60 * 1000
-    let endTime = date.getTime()
-    // search through all orders from all producers, split into expired and not expired arrays
-    for (let producer = 0; producer < allProducers.length; producer++) {
-      for (let i = 0; i < allProducers[producer].data.length; i++) {
-        nextTime = new Date(allProducers[producer].data[i].arrived).getTime()
-        if (endTime - nextTime > thirtyDaysMilliseconds) {
-          expiredOrders.push(allProducers[producer].data[i])
-        }
-        if (endTime - nextTime <= thirtyDaysMilliseconds
-          && endTime - nextTime >= 0) {
-          notExpiredOrders.push(allProducers[producer].data[i])
-        }
-        //else do nothing, the order would be in the future.
-      }
-    }
-    return [expiredOrders, notExpiredOrders]
-  }
-
-  /**
-   * 
-   * @param {Date} date selected date for calculations
-   * @returns {Array} two-dimensional array containing given and not given vaccines on selected date
-   */
-  const calculateInjectionArrays = date => {
-    let nextTime = 0
-    let endTime = date.getTime()
-    const given = []
-    const notGiven = []
-    // loop through all injections and check the date
-    for (let i = 0; i < vaccinationData.length; i++) {
-      nextTime = new Date(vaccinationData[i].vaccinationDate).getTime()
-      // split data into given and not given based on date
-      if (endTime  - nextTime > 0) {
-        given.push(vaccinationData[i])
-      } else {
-        notGiven.push(vaccinationData[i])
-      }
-    }
-    return [given, notGiven]
-  }
-
- 
-  /**
-   * Counts how many injections arrived in the last 30 days and are not yet injected,
-   * and updates state accordingly.
-   * 
-   * @param {Date} date selected date for calculations
-   */
-  const calculateUsableAndInjectedVaccines = date => {
-    let expirationArrays = calculateExpirationArrays(date)
-    let injectionArrays = calculateInjectionArrays(date)
-    let notExpiredCount = 0
-    let usableCount = 0
-    for (let i = 0; i < expirationArrays[1].length; i++) {
-      notExpiredCount += expirationArrays[1][i].injections
-    }
-    let givenNotExpired = 0
-    for (let i = 0; i < injectionArrays[0].length; i++) {
-      for (let j = 0; j < expirationArrays[1].length; j++) {
-        if (injectionArrays[0][i].sourceBottle === expirationArrays[1][j].id) {
-          givenNotExpired++
-          break
-        }
-      }
-    }
-    usableCount = notExpiredCount - givenNotExpired
-    setUsableOnDate(usableCount)
-    setInjectedUpToDate(injectionArrays[0].length)
-  }
-
-  /**
-   * updates state based on selected date, updating state with aggregated data
-   * @param {Date} date selected date for calculations
-   */
-  const calculateAggregatedData = date => {
-    calculateUsableAndInjectedVaccines(date)
-    setExpiredUpToDate(calculateExpirationsUpToDate(date))
-    setTenDayExpirations(calculateTenDayExpirations(date))
-  }
-
-  /**
-   * 
-   * @param {Date} date selected date for calculations
-   * @returns {Number} total amount of expired vaccines up to the selected date
-   */
-  const calculateExpirationsUpToDate = date => {
-    let expirationArrays = calculateExpirationArrays(date)
-    let injectionArrays = calculateInjectionArrays(date)
-    let expiredInjections = 0
-    // calculate total expirations as if none were given
-    for (let i = 0; i < expirationArrays[0].length; i++) {
-      expiredInjections += expirationArrays[0][i].injections
-    }
-    // reduce the potential expirations with those that were actually given
-    for (let i = 0; i < injectionArrays[0].length; i++) {
-      for (let j = 0; j < expirationArrays[0].length; j++) {
-        if (injectionArrays[0][i].sourceBottle === expirationArrays[0][j].id) {
-          expiredInjections--
-          break
-        }
-      }
-    }
-    return expiredInjections
-  }
-  
-  /**
-   * Source for this code snippet, slightly modified:
-   * https://stackoverflow.com/a/19691491
-   * 
-   * @param {Date} date selected date for calculations
-   * @returns amount of vaccines expiring in 10 days following the selected date
-   */
-  const calculateTenDayExpirations = date => {
-    let currentExpirations = calculateExpirationsUpToDate(date)
-    let futureDate = new Date(date)
-    futureDate.setDate(futureDate.getDate() + 10)
-    let futureExpirations = calculateExpirationsUpToDate(futureDate)
-    return futureExpirations - currentExpirations
-  }
-
-  // updates all date-related states upon selecting a new date
+  * updates all date-related states upon selecting a new date
+  * 
+  * @param {Date} date selected date is used for all calculations
+  */
   const handleDateChange = date => {
     setSelectedDate(date)
-    setOrdersOnDate(getOrdersOnDate(date))
-    setInjectionsOnDate(getVaccinesOnDate(date))
-    calculateAggregatedData(date)
+    setOrdersOnDate(getOrdersOnDate(antiqua.data, date) + 
+      getOrdersOnDate(solarBuddhica.data, date) + 
+      getOrdersOnDate(zerpfy.data, date))
+    setInjectionsOnDate(getVaccinesOnDate(vaccinationData, date))
+    const aggregatedData = calculateAggregatedData([antiqua.data, solarBuddhica.data, zerpfy.data], vaccinationData, date)
+    setUsableOnDate(aggregatedData.usable)
+    setInjectedUpToDate(aggregatedData.injected)
+    setTenDayExpirations(aggregatedData.tenDayExpirations)
+    setExpiredUpToDate(aggregatedData.expiredUpToDate)
     // displays charts about the date
     setShowGeneralInfo(false)
     setShowDateCharts(true)

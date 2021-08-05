@@ -1,3 +1,4 @@
+// require('dotenv').config()
 import axios from 'axios'
 import { useState, useEffect } from 'react'
 import 'react-datepicker/dist/react-datepicker.css'
@@ -15,16 +16,12 @@ import { getVaccinesPerProducer,
   getOrdersOnDate, 
   calculateAggregatedData } from './helpers/calculations'
 
-// TODO: update jsdocs
+// development URL 
+// const baseUrl = process.env.REACT_APP_DEV_URL
+// relative path for deployment
+const baseUrl = ''
 
-// const devUrl = 'http://localhost:3001'
-// const productionUrl = 'https://vast-harbor-53912.herokuapp.com/'
-
-// TODO: create a build, save url to env variable
-const baseUrl = 'http://localhost:3001' 
-
-const App = () => {
-
+const App = () => { 
   const placeholder = {
     data: [],
     orderCount: 0,
@@ -108,7 +105,7 @@ const App = () => {
 
 
   /**
-  * updates all date-related states upon selecting a new date
+  * Updates all date-related states upon selecting a new date.
   * 
   * @param {Date} date selected date is used for all calculations
   */
@@ -138,7 +135,6 @@ const App = () => {
     )
   }
 
-  // TODO: make view stretch to 100% height
   return (
     <>
       <Banner/>

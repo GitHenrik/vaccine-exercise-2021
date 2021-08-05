@@ -5,7 +5,7 @@ import React from 'react'
 
 
 // displays some aggregated data until the selected date.
-// TODO: update this as more data is ready to be displayed.
+// Can be updated as more data is ready to be displayed.
 const AggregatedDataGraph = ({injectedUpToDate, expiredUpToDate, usableOnDate}) => {
   const data = {
     labels: ['Total given injections', 'Total expired injections', 'Usable injections'],

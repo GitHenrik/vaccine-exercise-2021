@@ -2,6 +2,8 @@
 
 This programming exercise was provided by Solita: https://github.com/solita/vaccine-exercise-2021
 
+Click to launch this application on Heroku: https://vast-harbor-53912.herokuapp.com/
+
 # A brief description of the exercise
 
 THL has ordered us to create a vaccination database which contains information about vaccine orders and vaccinations.
